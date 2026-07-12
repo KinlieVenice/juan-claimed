@@ -1,0 +1,358 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DimUser {
+  id        String   @id @default(uuid())
+  username     String  @db.VarChar(255) @unique
+  email     String   @db.VarChar(255) @unique
+  firstName      String @db.VarChar(255)
+  middleName      String? @db.VarChar(255)
+  lastName       String @db.VarChar(255)
+  passHash  String @db.VarChar(255)
+  role UserRole @default(USER)
+
+  scopeId String
+  scope   DimScope @relation(fields: [scopeId], references: [id])
+
+  googleId String? @db.VarChar(255)
+  avatarUrl String?
+  active Boolean @default(true)
+
+  userFieldAnswers FctUserFieldAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_user")
+}
+
+enum UserRole {
+  SUPERADMIN
+  AGENT
+  USER
+}
+
+model DimScope {
+  id String @id @default(uuid())
+  name String @db.VarChar(255)
+  value String @db.VarChar(255) @unique
+
+  users DimUser[]
+  benefits FctBenefit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_scope")
+}
+
+model DimDepartment {
+  id String @id @default(uuid())
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  englishDescription String
+  tagalogDescription String
+
+  benefits FctBenefit[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_department")
+}
+
+model DimField {
+  id String @id @default(uuid())
+
+  key String @db.VarChar(255) @unique
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  description String
+
+  inputTypeId String
+  InputType DimInputType @relation(fields: [inputTypeId], references: [id])
+
+  fieldHierarchyId String
+  hierarchy DimFieldHierarchy @relation(fields: [fieldHierarchyId], references: [id])
+
+  required Boolean @default(true)
+  sortOrder Int @default(0)
+  configJson Json?
+  classfication FieldClassification @default(FOLLOW_UP)
+  default Boolean @default(false)
+
+  userFieldAnswers FctUserFieldAnswer[]
+  fieldOptions DimFieldOption[]
+  fieldConditions FctDynamicFieldCondition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field")
+}
+
+enum FieldClassification {
+  GLOBAL
+  FOLLOW_UP
+}
+
+model DimInputType {
+  id String @id @default(uuid())
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  value String @db.VarChar(255) @unique
+
+  fields DimField[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_input_type")
+}
+
+model DimFieldOption {
+  id String @id @default(uuid())
+
+  fieldId String
+  field   DimField @relation(fields: [fieldId], references: [id])
+
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  value String @db.VarChar(255) @unique
+
+  englishDescription String
+  tagalogDescription String
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field_option")
+}
+
+model DimFieldHierarchy {
+  id String @id @default(uuid())
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+
+  fields DimField[]
+  fieldHierarchyLevels DimFieldHierarchyLevel[]
+  fieldHierarchyNodes DimFieldHierarchyNode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field_hierarchy")
+}
+
+model DimFieldHierarchyLevel {
+  id String @id @default(uuid())
+
+  fieldHierarchyId String
+  fieldHierarchy DimFieldHierarchy @relation(fields: [fieldHierarchyId], references: [id])
+
+  level Int @default(1)
+
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  englishDescription String
+  tagalogDescription String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field_hierarchy_level")
+}
+
+model DimFieldHierarchyNode {
+  id String @id @default(uuid())
+
+  fieldHierarchyId String
+  fieldHierarchy DimFieldHierarchy @relation(fields: [fieldHierarchyId], references: [id])
+
+  parentNodeId String?
+  parentNode   DimFieldHierarchyNode?  @relation("childNodes", fields: [parentNodeId], references: [id])
+  childNodes   DimFieldHierarchyNode[] @relation("childNodes")
+
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  value String @db.VarChar(255) @unique
+  englishDescription String
+  tagalogDescription String
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field_hierarchy_node")
+}
+
+model DimFieldConditionOperator {
+  id String @id @default(uuid())
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  value String @db.VarChar(255) @unique
+
+  fieldConditions FctDynamicFieldCondition[]
+  benefitFieldConditions BenefitFieldCondition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dim_field_condition_operator")
+}
+
+model FctBenefit {
+  id String @id @default(uuid())
+
+  departmentId String
+  department DimDepartment @relation(fields: [departmentId], references: [id])
+
+  scopeId String
+  scope DimScope @relation(fields: [scopeId], references: [id])
+
+  benefitRequirements FctBenefitRequirement[]
+  benefitUtilizations FctBenefitUtilization[]
+  benefitFieldConditions BenefitFieldCondition[]
+
+  name String @db.VarChar(255)
+  englishDescription String
+  tagalogDescription String
+  psgcCode String @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_benefit")
+} 
+
+model BenefitFieldCondition {
+  id String @id @default(uuid())
+
+  
+  benefitId String
+  benefit FctBenefit @relation(fields: [benefitId], references: [id])
+  
+  benefitFieldConditionId String
+  benefitFieldCondition FctDynamicFieldCondition @relation("BFC_FDC", fields: [benefitFieldConditionId], references: [id])
+
+  fieldConditions FctDynamicFieldCondition[] @relation("FDC_BFC")
+
+  fieldConditionOperatorId String
+  fieldConditionOperator DimFieldConditionOperator @relation(fields: [fieldConditionOperatorId], references: [id])
+
+  conditionFieldValue Json @db.Json
+
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("benefit_field_condition")
+}
+
+model FctBenefitRequirement {
+  id String @id @default(uuid())
+
+  benefitId String
+  benefit FctBenefit @relation(fields: [benefitId], references: [id])
+
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  englishDescription String
+  tagalogDescription String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_benefit_requirement")
+}
+
+model FctBenefitUtilization {
+  id String @id @default(uuid())
+
+  benefitId String
+  benefit FctBenefit @relation(fields: [benefitId], references: [id])
+
+  englishName String @db.VarChar(255)
+  tagalogName String @db.VarChar(255)
+  englishDescription String
+  tagalogDescription String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_benefit_utilization")
+}
+
+model FctAttachment {
+  id String @id @default(uuid())
+
+  fileLabel String @db.VarChar(255)
+  fileName String @db.VarChar(255)
+  fileType String @db.VarChar(255)
+  filePath String @db.VarChar(255)
+  fileSize BigInt
+  entityId String @db.VarChar(255)
+  entityType String @db.VarChar(255)
+  metaData Json @db.Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_benefit_attachment")
+}
+
+model FctUserFieldAnswer {
+  id String @id @default(uuid())
+
+  userId String
+  user DimUser @relation(fields: [userId], references: [id])
+
+  fieldId String
+  field DimField @relation(fields: [fieldId], references: [id])
+
+  field_value String? @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_user_field_answer")
+}
+
+model FctDynamicFieldCondition {
+  id String @id @default(uuid())
+
+  fieldId String
+  field DimField @relation(fields: [fieldId], references: [id])
+
+  fieldConditionOperatorId String
+  fieldConditionOperator DimFieldConditionOperator @relation(fields: [fieldConditionOperatorId], references: [id])
+
+  benefitFieldConditions BenefitFieldCondition[] @relation("BFC_FDC")
+
+  fieldConditionId String?
+  fieldCondition BenefitFieldCondition? @relation("FDC_BFC", fields: [fieldConditionId], references: [id])
+
+  conditionFieldValue Json @db.Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fct_dynamic_field_condition")
+}
