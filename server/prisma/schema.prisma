@@ -17,9 +17,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Project: Juan-Claimed. No code benefits finder. Agents create the benefits and Users answers the questions/fields agents set
+
 // THIS WHOLE STORY COMMENTS ARE FOR BENEFITS PART ONLY. FIELD AND HIERARCHY TABLES ARE FOR ANOTHER PLAN. FOR NOW I WILL ONLY EXPLAIN BENEFITS, USERS, SCOPES AND GROUPS.
 
-// user table for authentication and authorization. this is the main user table that will be used for authentication and authorization. this is gmail log in sso. it will be used to store the user information and the user role. the user role will be used to determine the access level of the user. the user role can be SUPERADMIN, AGENT, or USER. SUPERADMIN can do everything, AGENT can only create benefits and fields, and USER can only view benefits and submit applications.
+// user table for authentication and authorization. this is the main user table that will be used for authentication and authorization. this is gmail sign up. it will be used to store the user information and the user role. the user role will be used to determine the access level of the user. the user role can be SUPERADMIN, AGENT, or USER. SUPERADMIN can do everything, AGENT can only create benefits and fields, and USER can only view benefits and submit applications.
 
 // 2 are referenced in user, scopeId and groupId. scope is from the dim scope and is required when user role is AGENT and inside scope table theres: national, region, province, district, city, and barangay
 
@@ -44,7 +46,7 @@ datasource db {
 
 // Then again, if scope for agent is national, then they can create benefits for all regions, provinces, cities, and barangays. but they have null as psgcCode. This is where group comes in
 
-// National scope agents are often for gov departments or agencies that have benefits for all regions, provinces, cities, and barangays. so they can create benefits for all regions, provinces, cities, and barangays or just select a few. so we use group to group benefits together. for example, if a national scope agent has a group of "Department of Health", then they can create benefits for all regions, provinces, cities, and barangays or just select a few. and all benefits created by that agent will be grouped under "Department of Health".
+// National scope agents are often for gov departments or agencies that have benefits for all regions, provinces, cities, and barangays. so they can create benefits for all regions, provinces, cities, and barangays or just select a few. so we use group to group benefits together for natioanl. for example, if a national scope agent has a group of "Department of Health", then they can create benefits for all regions, provinces, cities, and barangays or just select a few. and all benefits created by that agent will be grouped under "Department of Health".
 
 
 model DimUser {
@@ -54,7 +56,7 @@ model DimUser {
   firstName   String   @db.VarChar(255)
   middleName  String?  @db.VarChar(255)
   lastName    String   @db.VarChar(255)
-  passHash    String   @db.VarChar(255)
+  passHash    String?  @db.VarChar(255)
   role        UserRole @default(USER)
 
   psgcCode    String?  @db.VarChar(255)
@@ -105,6 +107,8 @@ model DimUser {
   dynamicFieldConditionsUpdators FctDynamicFieldCondition[] @relation("DynamicFieldConditionUpdatedBy")
   benefitPsgcCodesCreators DimBenefitPsgcCode[] @relation("BenefitPsgcCreatedBy")
   benefitPsgcCodesUpdators DimBenefitPsgcCode[] @relation("BenefitPsgcUpdatedBy")
+  benefitGroupCreators DimBenefitGroup[] @relation("BenefitGroupCreatedBy")
+  benefitGroupUpdators DimBenefitGroup[] @relation("BenefitGroupUpdatedBy")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -117,6 +121,8 @@ model DimUser {
   updatedBy   DimUser? @relation("UserUpdatedBy", fields: [updatedById], references: [id])
   updatorUsers DimUser[] @relation("UserUpdatedBy")
 
+  deletedAt   DateTime?
+
   @@map("dim_user")
 }
 
@@ -125,6 +131,16 @@ enum UserRole {
   AGENT
   USER
 }
+
+
+// for context there are the scope:
+// 'NATIONAL',
+// 'REGION',
+// 'PROVINCE',
+// 'DISTRICT'
+// 'CITY',
+// 'MUNICIPALITY',
+// 'BARANGAY'
 
 model DimScope {
   id String @id @default(uuid())
@@ -144,6 +160,8 @@ model DimScope {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("ScopeUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
   @@map("dim_scope")
 }
 
@@ -154,7 +172,8 @@ model DimGroup {
   englishDescription String
   tagalogDescription String
 
-  benefits FctBenefit[]
+  benefitGroups DimBenefitGroup[]
+  users DimUser[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -165,20 +184,24 @@ model DimGroup {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("GroupUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
   @@map("dim_group")
 }
 
-// now moving on to the actual benefit part. A benefit can only belong to ONE group and ONE scope but can be one to many psgcCode (its an array like)
+// now moving on to the actual benefit part. A benefit can only belong to ONE group and ONE scope but can be one to many psgcCode
 
 // benefit can have many requirements, utilizations and even attachments. what i want to do is when i add requirement, i can attach attachment for that too same with utilization. benefit field conditions, we discuss that later after planning for benefits is done bec thats part of part 2 which is about fields.
 
-// going back, an agent can create a benefit and if an agent is a province scope they can either make that benefit applicable to whole province or select municipality/district/barangay etc and those will be saved in dim_benefit_psgc_code and the scope is that if that ichecked is municipality, scope wil be municipality.
+// going back, an agent can create a benefit and if an agent is a province scope they can either make that benefit applicable to whole province or select municipality/district/barangay etc and those will be saved in dim_benefit_psgc_code and the scope will be used to query the api like /municipalities like that so its easy to know the name of that location eligible in the benefit
+
+
+/**
+The whole flow is like this. For the setting up of benefits: Agent signs up using gmail. The superadmin assigns them a scope. Then they create a benefit, select which locations under them can be eligible, add descriptions, requirements and utilizations. Agent can also add attachments (more than one possible but not required) per requirement/utilization. Then they select fields and set logic conditions on those fields and if an ordinary user answers the form and matches all those fields required then that benefit will display to him as he is eligible for this benefit.
+**/
 
 model FctBenefit {
   id String @id @default(uuid())
-
-  groupId String
-  group DimGroup @relation(fields: [groupId], references: [id])
 
   scopeId String
   scope DimScope @relation(fields: [scopeId], references: [id])
@@ -187,10 +210,13 @@ model FctBenefit {
   benefitUtilizations FctBenefitUtilization[]
   benefitFieldConditions BenefitFieldCondition[]
   benefitPsgcCodes DimBenefitPsgcCode[]
+  benefitGroups DimBenefitGroup[]
 
   name String @db.VarChar(255)
   englishDescription String
   tagalogDescription String
+
+  version Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,8 +226,37 @@ model FctBenefit {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("BenefitUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@index([deletedAt])
   @@map("fct_benefit")
 } 
+
+model DimBenefitGroup {
+  id String @id @default(uuid())
+
+  benefitId String
+  benefit FctBenefit @relation(fields: [benefitId], references: [id])
+
+  groupId String
+  group DimGroup @relation(fields: [groupId], references: [id])
+
+  creator Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdById String? @db.VarChar(255)
+  createdBy   DimUser? @relation("BenefitGroupCreatedBy", fields: [createdById], references: [id])
+
+  updatedById String? @db.VarChar(255)
+  updatedBy   DimUser? @relation("BenefitGroupUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
+
+  @@unique([benefitId, groupId])
+  @@map("dim_benefit_group")
+}
 
 model DimBenefitPsgcCode {
   id String @id @default(uuid())
@@ -222,6 +277,9 @@ model DimBenefitPsgcCode {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("BenefitPsgcUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@unique([benefitId, psgcCode])
   @@map("dim_benefit_psgc_code")
 
 }
@@ -246,6 +304,9 @@ model FctBenefitRequirement {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("RequirementUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@index([deletedAt])
   @@map("fct_benefit_requirement")
 }
 
@@ -269,6 +330,9 @@ model FctBenefitUtilization {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("UtilizationUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@index([deletedAt])
   @@map("fct_benefit_utilization")
 }
 
@@ -293,6 +357,9 @@ model FctAttachment {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("AttachmentUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@index([entityType, entityId])
   @@map("fct_benefit_attachment")
 }
 
@@ -323,6 +390,8 @@ model BenefitFieldCondition {
 
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("BenefitFieldConditionUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
 
   @@map("benefit_field_condition")
 }
@@ -362,6 +431,8 @@ model DimField {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("FieldUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
   @@map("dim_field")
 }
 
@@ -370,6 +441,15 @@ enum FieldClassification {
   FOLLOW_UP
 }
 
+
+//for context these are some of the types
+// 'TEXT',
+// 'NUMBER',
+// 'DATE',
+// 'BOOLEAN',
+// 'SINGLE_SELECT',
+// 'MULTI_SELECT',
+// 'HIERARCHICAL_SELECT'
 model DimInputType {
   id String @id @default(uuid())
   englishName String @db.VarChar(255)
@@ -387,6 +467,8 @@ model DimInputType {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("InputTypeUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
   @@map("dim_input_type")
 }
 
@@ -398,7 +480,7 @@ model DimFieldOption {
 
   englishName String @db.VarChar(255)
   tagalogName String @db.VarChar(255)
-  value String @db.VarChar(255) @unique
+  value String @db.VarChar(255)
 
   englishDescription String
   tagalogDescription String
@@ -414,6 +496,9 @@ model DimFieldOption {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("FieldOptionUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@unique([fieldId, value])
   @@map("dim_field_option")
 }
 
@@ -434,6 +519,8 @@ model DimFieldHierarchy {
 
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("HierarchyUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
 
   @@map("dim_field_hierarchy")
 }
@@ -460,6 +547,8 @@ model DimFieldHierarchyLevel {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("HierarchyLevelUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
   @@map("dim_field_hierarchy_level")
 }
 
@@ -475,7 +564,7 @@ model DimFieldHierarchyNode {
 
   englishName String @db.VarChar(255)
   tagalogName String @db.VarChar(255)
-  value String @db.VarChar(255) @unique
+  value String @db.VarChar(255)
   englishDescription String
   tagalogDescription String
 
@@ -490,6 +579,9 @@ model DimFieldHierarchyNode {
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("HierarchyNodeUpdatedBy", fields: [updatedById], references: [id])
 
+  deletedAt DateTime?
+
+  @@unique([fieldHierarchyId, value])
   @@map("dim_field_hierarchy_node")
 }
 
@@ -510,6 +602,8 @@ model DimFieldConditionOperator {
 
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("ConditionOperatorUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
 
   @@map("dim_field_condition_operator")
 }
@@ -533,6 +627,8 @@ model FctUserFieldAnswer {
 
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("UserFieldAnswerUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
 
   @@map("fct_user_field_answer")
 }
@@ -561,6 +657,8 @@ model FctDynamicFieldCondition {
 
   updatedById String? @db.VarChar(255)
   updatedBy   DimUser? @relation("DynamicFieldConditionUpdatedBy", fields: [updatedById], references: [id])
+
+  deletedAt DateTime?
 
   @@map("fct_dynamic_field_condition")
 }
