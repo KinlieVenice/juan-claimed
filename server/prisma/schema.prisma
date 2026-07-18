@@ -14,7 +14,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
 }
 
 // Project: Juan-Claimed. No code benefits finder. Agents create the benefits and Users answers the questions/fields agents set
@@ -87,8 +87,8 @@ model DimUser {
   groupsUpdators DimGroup[] @relation("GroupUpdatedBy")
   fieldsCreators DimField[] @relation("FieldCreatedBy")
   fieldsUpdators DimField[] @relation("FieldUpdatedBy")
-  inputTypesCreators DimInputType[] @relation("InputTypeCreatedBy")
-  inputTypesUpdators DimInputType[] @relation("InputTypeUpdatedBy")
+  inputTypesCreators DimFieldInputType[] @relation("InputTypeCreatedBy")
+  inputTypesUpdators DimFieldInputType[] @relation("InputTypeUpdatedBy")
   fieldOptionsCreators DimFieldOption[] @relation("FieldOptionCreatedBy")
   fieldOptionsUpdators DimFieldOption[] @relation("FieldOptionUpdatedBy")
   hierarchiesCreators DimFieldHierarchy[] @relation("HierarchyCreatedBy")
@@ -99,8 +99,8 @@ model DimUser {
   hierarchyNodesUpdators DimFieldHierarchyNode[] @relation("HierarchyNodeUpdatedBy")
   conditionOperatorsCreators DimFieldConditionOperator[] @relation("ConditionOperatorCreatedBy")
   conditionOperatorsUpdators DimFieldConditionOperator[] @relation("ConditionOperatorUpdatedBy")
-  benefitFieldConditionsCreators BenefitFieldCondition[] @relation("BenefitFieldConditionCreatedBy")
-  benefitFieldConditionsUpdators BenefitFieldCondition[] @relation("BenefitFieldConditionUpdatedBy")
+  benefitFieldConditionsCreators DimBenefitFieldCondition[] @relation("BenefitFieldConditionCreatedBy")
+  benefitFieldConditionsUpdators DimBenefitFieldCondition[] @relation("BenefitFieldConditionUpdatedBy")
   userFieldAnswersCreators FctUserFieldAnswer[] @relation("UserFieldAnswerCreatedBy")
   userFieldAnswersUpdators FctUserFieldAnswer[] @relation("UserFieldAnswerUpdatedBy")
   dynamicFieldConditionsCreators FctDynamicFieldCondition[] @relation("DynamicFieldConditionCreatedBy")
@@ -208,7 +208,7 @@ model FctBenefit {
 
   benefitRequirements FctBenefitRequirement[]
   benefitUtilizations FctBenefitUtilization[]
-  benefitFieldConditions BenefitFieldCondition[]
+  benefitFieldConditions DimBenefitFieldCondition[]
   benefitPsgcCodes DimBenefitPsgcCode[]
   benefitGroups DimBenefitGroup[]
 
@@ -363,7 +363,7 @@ model FctAttachment {
   @@map("fct_benefit_attachment")
 }
 
-model BenefitFieldCondition {
+model DimBenefitFieldCondition {
   id String @id @default(uuid())
 
 
@@ -402,12 +402,17 @@ model DimField {
   id String @id @default(uuid())
 
   key String @db.VarChar(255) @unique
+
+  parentFieldId String?
+  parentField   DimField?  @relation("childFields", fields: [parentFieldId], references: [id])
+  childFields   DimField[] @relation("childFields")
+
   englishName String @db.VarChar(255)
   tagalogName String @db.VarChar(255)
   description String
 
-  inputTypeId String
-  InputType DimInputType @relation(fields: [inputTypeId], references: [id])
+  fieldInputTypeId String
+  fieldInputType DimFieldInputType @relation(fields: [fieldInputTypeId], references: [id])
 
   fieldHierarchyId String
   hierarchy DimFieldHierarchy @relation(fields: [fieldHierarchyId], references: [id])
@@ -450,13 +455,15 @@ enum FieldClassification {
 // 'SINGLE_SELECT',
 // 'MULTI_SELECT',
 // 'HIERARCHICAL_SELECT'
-model DimInputType {
+model DimFieldInputType {
   id String @id @default(uuid())
   englishName String @db.VarChar(255)
   tagalogName String @db.VarChar(255)
   value String @db.VarChar(255) @unique
 
   fields DimField[]
+  fieldConditionOperators DimFieldConditionOperator[]
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -591,8 +598,11 @@ model DimFieldConditionOperator {
   tagalogName String @db.VarChar(255)
   value String @db.VarChar(255) @unique
 
+  fieldInputTypeId String
+  fieldInputType   DimFieldInputType @relation(fields: [fieldInputTypeId], references: [id])
+
   fieldConditions FctDynamicFieldCondition[]
-  benefitFieldConditions BenefitFieldCondition[]
+  benefitFieldConditions DimBenefitFieldCondition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -642,10 +652,10 @@ model FctDynamicFieldCondition {
   fieldConditionOperatorId String
   fieldConditionOperator DimFieldConditionOperator @relation(fields: [fieldConditionOperatorId], references: [id])
 
-  benefitFieldConditions BenefitFieldCondition[] @relation("BFC_FDC")
+  benefitFieldConditions DimBenefitFieldCondition[] @relation("BFC_FDC")
 
   fieldConditionId String?
-  fieldCondition BenefitFieldCondition? @relation("FDC_BFC", fields: [fieldConditionId], references: [id])
+  fieldCondition DimBenefitFieldCondition? @relation("FDC_BFC", fields: [fieldConditionId], references: [id])
 
   conditionFieldValue Json @db.Json
 
