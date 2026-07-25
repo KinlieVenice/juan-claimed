@@ -49,7 +49,7 @@ export function EgovSignInButton() {
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="lg" className="w-full gap-2 rounded-full">
           <ShieldCheck className="size-4" />
-          Sign in with eGovPH
+          Mag-sign in sa eGovPH
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">

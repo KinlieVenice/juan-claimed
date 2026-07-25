@@ -74,9 +74,9 @@ export async function seedUsersAndRoles() {
   // A. Superadmin Account (Scope: Superadmin, Group: eGovPH, PsgcCode: Superadmin)
   await prisma.dimUser.upsert({
     where: { email: "superadmin@juanclaimed.com" },
-    update: { groupId: egovGroup.id, passHash: devPassHash },
+    update: { username: "superadmin", groupId: egovGroup.id, passHash: devPassHash },
     create: {
-      username: "superadmin_main",
+      username: "superadmin",
       email: "superadmin@juanclaimed.com",
       firstName: "System",
       lastName: "Administrator",

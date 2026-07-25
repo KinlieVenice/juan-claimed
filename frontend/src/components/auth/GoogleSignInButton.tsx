@@ -80,6 +80,10 @@ export function GoogleSignInButton() {
           size: "large",
           shape: "pill",
           width: measuredWidth,
+          // Google renders (and translates) this button itself — we can't inject custom
+          // text onto their official widget like we can on the eGovPH button below, but
+          // "fil" gets Google's own Filipino wording instead of English.
+          locale: "fil",
         });
       })
       .catch(() => setError("Could not load Google Sign-In."));
@@ -99,7 +103,9 @@ export function GoogleSignInButton() {
 
   return (
     <div className="flex w-full flex-col items-center gap-2">
-      <div ref={containerRef} className="flex w-full justify-center" />
+      {/* h-10 matches the eGovPH Button's `size="lg"` height so both rows line up even
+          though Google's iframe widget has its own internal chrome we can't restyle. */}
+      <div ref={containerRef} className="flex h-10 w-full items-center justify-center overflow-hidden" />
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );

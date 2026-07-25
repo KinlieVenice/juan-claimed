@@ -130,7 +130,7 @@ export function CreateUserModal({ open, onOpenChange, onCreated }: CreateUserMod
     >
       <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-8">
         <ModalSection title="Basic Info">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <TextField
               label="First name"
               value={identity.firstName}
@@ -138,15 +138,15 @@ export function CreateUserModal({ open, onOpenChange, onCreated }: CreateUserMod
               required
             />
             <TextField
-              label="Middle name (optional)"
-              value={identity.middleName}
-              onChange={(v) => setIdentity((d) => ({ ...d, middleName: v }))}
-            />
-            <TextField
               label="Last name"
               value={identity.lastName}
               onChange={(v) => setIdentity((d) => ({ ...d, lastName: v }))}
               required
+            />
+            <TextField
+              label="Middle name (optional)"
+              value={identity.middleName}
+              onChange={(v) => setIdentity((d) => ({ ...d, middleName: v }))}
             />
           </div>
 

@@ -8,7 +8,7 @@ import { TextField } from "@/components/ui/text-field";
 // USER accounts never have a password, they always come through Google or eGov.
 //
 // VITE_PRESET_USERNAME/VITE_PRESET_PASSWORD are a demo-only convenience — pre-fills this
-// form with a real seeded staff account (e.g. superadmin_main / password123) so a live demo
+// form with a real seeded staff account (e.g. superadmin / password123) so a live demo
 // doesn't need to type/remember credentials. Both unset (the normal case outside a demo) ->
 // the fields just start empty, unchanged from before.
 export function StaffSignInForm() {

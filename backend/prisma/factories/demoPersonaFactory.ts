@@ -405,9 +405,9 @@ async function seedDemoAdminAndAgent(): Promise<void> {
 
   await prisma.dimUser.upsert({
     where: { email: "superadmin@juanclaimed.com" },
-    update: { passHash: devPassHash },
+    update: { username: "superadmin", passHash: devPassHash },
     create: {
-      username: "superadmin_main",
+      username: "superadmin",
       email: "superadmin@juanclaimed.com",
       firstName: "System",
       lastName: "Administrator",
@@ -444,5 +444,14 @@ async function seedDemoAdminAndAgent(): Promise<void> {
 
 export async function seedDemoData(): Promise<void> {
   await seedDemoAdminAndAgent();
-  await seedDemoPersonas();
+
+  // The gmail demo personas (Jhoriz, Jeanne, ...) are local-dev-only fixtures — a real
+  // deployment (e.g. seeding a fresh Neon DB for Vercel) should only get the staff/agent
+  // accounts above, not fake citizen accounts. Opt-in via SEED_DEMO_PERSONAS=true, which
+  // docker-compose.yml sets for the local stack; omitted (the default) everywhere else.
+  if (process.env.SEED_DEMO_PERSONAS === "true") {
+    await seedDemoPersonas();
+  } else {
+    console.log("Skipped gmail demo persona accounts (SEED_DEMO_PERSONAS is not \"true\").");
+  }
 }

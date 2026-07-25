@@ -39,6 +39,12 @@ Root Directory setting. `landing-page/` is not deployed — its content already 
    ```bash
    DATABASE_URL="<neon-pooled-connection-string>" npx prisma db seed
    ```
+   By default this only creates the real staff/agent accounts (`superadmin`,
+   `agent_national_doh`, `agent_prov_cavite`, `agent_city_carmona`, all password `password123`)
+   plus reference data (fields, PSGC hierarchy, schools, countries, options). It does **not**
+   create the 6 gmail demo persona (citizen) accounts — those are local-dev-only and gated
+   behind `SEED_DEMO_PERSONAS=true` (set in `docker-compose.yml` for the local stack). Leave
+   that var unset for a real deployment.
 
 ## 2. Deploy the backend
 

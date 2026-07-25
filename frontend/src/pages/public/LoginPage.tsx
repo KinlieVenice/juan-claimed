@@ -1,12 +1,62 @@
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, KeyRound } from "lucide-react";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { EgovSignInButton } from "@/components/auth/EgovSignInButton";
 import { StaffSignInForm } from "@/components/auth/StaffSignInForm";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
+// Demo-only — mirrors the accounts seeded by userRoleSeeder.ts / demoPersonaFactory.ts's
+// seedDemoAdminAndAgent (all password "password123"). Update this list if those seeders
+// change. Not gated behind an env var like VITE_PRESET_* since it's just a reference list,
+// not an auto-fill — showing it is an explicit user click, not the default view.
+const STAFF_CREDENTIALS = [
+  { role: "Superadmin", username: "superadmin" },
+  { role: "National Agent", username: "agent_national_doh" },
+  { role: "Provincial Agent (Cavite)", username: "agent_prov_cavite" },
+  { role: "City Agent (Carmona)", username: "agent_city_carmona" },
+] as const;
+const STAFF_PASSWORD = "password123";
+
+function StaffCredentialsDialog() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm" className="w-full gap-2">
+          <KeyRound className="size-3.5" />
+          Show credentials
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Seeded staff credentials</DialogTitle>
+          <DialogDescription>Demo only — for testing agency staff sign-in.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          {STAFF_CREDENTIALS.map((cred) => (
+            <div key={cred.username} className="rounded-lg border border-slate-200 p-3 text-sm">
+              <p className="text-xs font-semibold text-slate-500">{cred.role}</p>
+              <p className="font-mono text-slate-800">
+                username: {cred.username} password: {STAFF_PASSWORD}
+              </p>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function LoginPage() {
   const [staffOpen, setStaffOpen] = React.useState(false);
@@ -43,8 +93,9 @@ export function LoginPage() {
           <ChevronDown className={cn("size-3.5 transition-transform", staffOpen && "rotate-180")} />
         </button>
         {staffOpen && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-4">
             <StaffSignInForm />
+            <StaffCredentialsDialog />
           </div>
         )}
       </div>

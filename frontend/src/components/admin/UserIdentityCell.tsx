@@ -1,6 +1,8 @@
+import { Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isTeamCreator } from "@/lib/team-creators";
 import type { UserRole } from "@/services/users.service";
 
 interface UserIdentityCellProps {
@@ -20,8 +22,16 @@ export function UserIdentityCell({ firstName, lastName, email, avatarUrl }: User
         <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{initials}</AvatarFallback>
       </Avatar>
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">
-          {firstName} {lastName}
+        <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
+          <span className="truncate">
+            {firstName} {lastName}
+          </span>
+          {isTeamCreator(email) && (
+            <Badge className="shrink-0 gap-1 border-transparent bg-amber-100 text-amber-800">
+              <Sparkles className="size-3" />
+              Creator
+            </Badge>
+          )}
         </p>
         <p className="truncate text-xs text-muted-foreground">{email}</p>
       </div>
